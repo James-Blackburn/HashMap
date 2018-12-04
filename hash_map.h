@@ -1,5 +1,6 @@
 #ifndef _LIB_HASHMAP
 #define _LIB_HASHMAP
+#include <exception>
 #include <string>
 
 namespace lib{
@@ -37,24 +38,30 @@ namespace lib{
                 : key(_key), value(_value){}
         };
         hash_entry* hash_entries;
-        int* filled_positions;
+        unsigned int* filled_positions;
         unsigned int hash_map_size;
+        unsigned int num_entries;
 
     public:
-        typedef hash_entry* const_iterator;
+        typedef const hash_entry* const_iterator;
+        typedef hash_entry* iterator;
         explicit hash_map(unsigned int);
         ~hash_map();
+        iterator begin();
+        iterator end();
         const_iterator cbegin();
         const_iterator cend();
+        unsigned int size();
         void add(const T&, const U&);
         U& operator[](const T&);
     };
 
     template <typename T, typename U>
-    hash_map<T,U>::hash_map(unsigned int _size){
-        hash_entries = new hash_entry[_size];
-        filled_positions = new int[_size]();
-        hash_map_size = _size;
+    hash_map<T,U>::hash_map(unsigned int _size):
+        hash_entries(new hash_entry[_size]),
+        filled_positions(new unsigned int[_size]()),
+        hash_map_size(_size),
+        num_entries(0){
     }
 
     template <typename T, typename U>
@@ -74,20 +81,44 @@ namespace lib{
     }
 
     template <typename T, typename U>
+    typename hash_map<T,U>::iterator hash_map<T,U>::begin(){
+        return hash_entries;
+    }
+
+    template <typename T, typename U>
+    typename hash_map<T,U>::iterator hash_map<T,U>::end(){
+        return hash_entries+hash_map_size;
+    }
+
+    template <typename T, typename U>
+    unsigned int hash_map<T,U>::size(){
+        return hash_map_size;
+    }
+
+    template <typename T, typename U>
     void hash_map<T,U>::add(const T& _key, const U& _value){
+        if (num_entries >= hash_map_size){
+            throw std::out_of_range("std::out_of_range : hash_map full");
+        }
         unsigned int position = details::generate_hash(_key,hash_map_size);
         while (filled_positions[position]){
             position = (position+1)%hash_map_size;
         }
         filled_positions[position] = 1;
         hash_entries[position] = hash_entry(_key,_value);
+        num_entries += 1;
     }
 
     template <typename T, typename U>
     U& hash_map<T,U>::operator[](const T& _key){
         unsigned int position = details::generate_hash(_key,hash_map_size);
+        unsigned int count = 0;
         while (hash_entries[position].key != _key){
+            if (count > hash_map_size){
+                throw std::invalid_argument("std::invalid_argument : key not in hash_map");
+            }
             position = (position+1)%hash_map_size;
+            count += 1;
         }
         return hash_entries[position].value;
     }
