@@ -6,19 +6,25 @@
 namespace lib{
 
     namespace details{
+        
+        const unsigned int NUM_HASHER = 1367; 
 
         unsigned int generate_hash(const int& key, const size_t& hash_map_size){
-            return key%hash_map_size;
+            return (key*NUM_HASHER)%hash_map_size;
         }
 
         unsigned int generate_hash(const std::string& key, const size_t& hash_map_size){
-            return key.size()%hash_map_size;
+            size_t position = 0;
+            for (size_t i=0; i<key.size(); i++){
+                position += key[i]*i;
+            }
+            return position%hash_map_size;
         }
 
         unsigned int generate_hash(const char* key, const size_t& hash_map_size){
             size_t position = 0;
             for (size_t i=0; key[i]!='\0'; i++){
-                position += key[i];
+                position += key[i]*i;
             }
             return position%hash_map_size;
         }
@@ -33,12 +39,12 @@ namespace lib{
         struct hash_entry{
             T key;
             U value;
-            hash_entry(){}
+            bool is_filled;
+            hash_entry() : is_filled(false){}
             hash_entry(const T& _key, const U& _value)
-                : key(_key), value(_value){}
+                : key(_key), value(_value), is_filled(true){}
         };
         hash_entry* hash_entries;
-        unsigned int* filled_positions;
         unsigned int hash_map_size;
         unsigned int num_entries;
 
@@ -59,14 +65,12 @@ namespace lib{
     template <typename T, typename U>
     hash_map<T,U>::hash_map(unsigned int _size):
         hash_entries(new hash_entry[_size]),
-        filled_positions(new unsigned int[_size]()),
         hash_map_size(_size),
         num_entries(0){
     }
 
     template <typename T, typename U>
     hash_map<T,U>::~hash_map(){
-        delete[] filled_positions;
         delete[] hash_entries;
     }
 
@@ -101,10 +105,9 @@ namespace lib{
             throw std::out_of_range("std::out_of_range : hash_map full");
         }
         unsigned int position = details::generate_hash(_key,hash_map_size);
-        while (filled_positions[position]){
+        while (hash_entries[position].is_filled){
             position = (position+1)%hash_map_size;
         }
-        filled_positions[position] = 1;
         hash_entries[position] = hash_entry(_key,_value);
         num_entries += 1;
     }
