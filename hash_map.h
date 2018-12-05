@@ -1,5 +1,5 @@
-#ifndef _LIB_HASHMAP
-#define _LIB_HASHMAP
+#ifndef LIB_HASHMAP
+#define LIB_HASHMAP
 #include <stdexcept>
 #include <string>
 
@@ -8,6 +8,7 @@ namespace lib{
     namespace details{
 
         const unsigned int NUM_HASHER = 31337;
+        const unsigned int DEFAULT_SIZE = 4;
 
         unsigned int generate_hash(const int& key, const unsigned int& hash_map_size){
             return (key*NUM_HASHER)%hash_map_size;
@@ -47,31 +48,46 @@ namespace lib{
         hash_entry* hash_entries;
         unsigned int hash_map_size;
         unsigned int num_entries;
+
+        void rehash(unsigned int);
+        void add(const K&, const V&, hash_entry*);
+
     public:
         typedef const hash_entry* const_iterator;
         typedef hash_entry* iterator;
-        explicit hash_map(unsigned int);
+
+        hash_map();
+        hash_map(unsigned int);
         hash_map(const hash_map<K,V>&);
         ~hash_map();
-        iterator begin();
-        iterator end();
-        const_iterator cbegin() const;
-        const_iterator cend() const;
-        unsigned int size() const;
+        inline iterator begin();
+        inline iterator end();
+        inline const_iterator cbegin() const;
+        inline const_iterator cend() const;
+        inline unsigned int size() const;
+        inline unsigned int entries() const;
         void add(const K&, const V&);
         void remove(const K&);
         V& operator[](const K&);
     };
 
+
     template <typename K, typename V>
-    hash_map<K,V>::hash_map(unsigned int _size):
+    hash_map<K,V>::hash_map() :
+        hash_entries(new hash_entry[details::DEFAULT_SIZE]),
+        hash_map_size(details::DEFAULT_SIZE),
+        num_entries(0){
+    }
+
+    template <typename K, typename V>
+    hash_map<K,V>::hash_map(unsigned int _size) :
         hash_entries(new hash_entry[_size]),
         hash_map_size(_size),
         num_entries(0){
     }
 
     template <typename K, typename V>
-    hash_map<K,V>::hash_map(const hash_map<K,V>& old_map):
+    hash_map<K,V>::hash_map(const hash_map<K,V>& old_map) :
         hash_map_size(old_map.size()),
         hash_entries(new hash_entry[old_map.size()]),
         num_entries(0){
@@ -113,15 +129,45 @@ namespace lib{
     }
 
     template <typename K, typename V>
+    unsigned int hash_map<K,V>::entries() const{
+        return num_entries;
+    }
+
+    template <typename K, typename V>
+    void hash_map<K,V>::rehash(unsigned int new_size){
+        hash_entry* new_hash_map = new hash_entry[new_size];
+        unsigned int old_hash_map_size = hash_map_size;
+        hash_map_size = new_size;
+        num_entries = 0;
+        for (unsigned int i=0; i<old_hash_map_size; ++i){
+            if (hash_entries[i].is_filled){
+                add(hash_entries[i].key, hash_entries[i].value, new_hash_map);
+            }
+        }
+        delete[] hash_entries;
+        hash_entries = new_hash_map;
+    }
+
+    template <typename K, typename V>
     void hash_map<K,V>::add(const K& key, const V& value){
         if (num_entries >= hash_map_size){
-            throw std::out_of_range("std::out_of_range : hash_map full");
+            rehash(hash_map_size*2);
         }
         unsigned int position = details::generate_hash(key,hash_map_size);
         while (hash_entries[position].is_filled){
             position = (position+1)%hash_map_size;
         }
         hash_entries[position] = hash_entry(key,value);
+        num_entries += 1;
+    }
+
+    template <typename K, typename V>
+    void hash_map<K,V>::add(const K& key, const V& value, hash_entry* _hash_entries){
+        unsigned int position = details::generate_hash(key,hash_map_size);
+        while (_hash_entries[position].is_filled){
+            position = (position+1)%hash_map_size;
+        }
+        _hash_entries[position] = hash_entry(key,value);
         num_entries += 1;
     }
 
@@ -153,5 +199,4 @@ namespace lib{
 
 }
 
-#endif // _LIB_HASHMAP
-
+#endif // LIB_HASHMAP
