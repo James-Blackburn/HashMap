@@ -197,7 +197,7 @@ namespace lib{
             rehash(hash_map_size*2);
         }
         unsigned int position = details::generate_hash(key,hash_map_size);
-        while (hash_entries[position].is_filled){
+        while (hash_entries[position].is_filled()){
             position = (position+1)%hash_map_size;
         }
         hash_entries[position] = hash_entry<K,V>(key,value);
