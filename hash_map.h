@@ -113,7 +113,7 @@ namespace lib{
         hash_entries(new hash_entry<K,V>[old_map.size()]),
         num_entries(0){
         for (hash_map<K,V>::const_iterator entry=old_map.cbegin(); entry!=old_map.cend(); entry++){
-            if (entry->is_filled){
+            if (entry->is_filled()){
                 add(entry->key,entry->value);
             }
         }
